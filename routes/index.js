@@ -14,7 +14,7 @@ router.post('/register',(req,res)=>{
       }else{
         new UserModel({username,password: md5(password),type}).save(function (err,user) {
             if(!err && user){
-              res.cookie("user_id",user._id,{maxAge:1000*3600*24*7})
+              res.cookie("userid",user._id,{maxAge:1000*3600*24*7})
               console.log("数据保存成功");
               res.send({code: 0, data: {_id: user._id, username, type}})
             }
@@ -30,25 +30,37 @@ router.post('/login', function (req, res) {
         if(!user) {
             res.send({code: 1, msg: '用户名或密码错误'})
         } else {
-            res.cookie('user_id', user._id, {maxAge: 1000*60*60*24*7})
+            res.cookie('userid', user._id, {maxAge: 1000*60*60*24*7})
             res.send({code: 0, data: user}) // user中没有pwd
         }
     })
 });
-router.post('/update',function (req,res) {
-    /*获取cookie得值*/
-    const userid =req.cookies('user_id');
-    if(!userid){
-      res.send({code:1,msg:'请先登录'})
+router.post('/update', function (req, res) {
+    // 从请求的cookie得到userid
+    const userid = req.cookies.userid
+    // 如果不存在, 直接返回一个提示信息
+    if(!userid) {
+        return res.send({code: 1, msg: '请先登陆'})
     }
-    UserModel.findByIdAndUpdate({_id:userid},req.data,function (err,user) {
-        const {_id,username,type} = user;
-        /*合并新老数据*/
-        const data = Object.assign(...req.body,{_id,username,type});
-        res.send({code:0,data})
+    // 存在, 根据userid更新对应的user文档数据
+    // 得到提交的用户数据
+    const user = req.body // 没有_id
+    UserModel.findByIdAndUpdate({_id: userid}, user, function (error, oldUser) {
 
+        if(!oldUser) {
+            // 通知浏览器删除userid cookie
+            res.clearCookie('userid')
+            // 返回返回一个提示信息
+            res.send({code: 1, msg: '请先登陆'})
+        } else {
+            // 准备一个返回的user数据对象
+            const {_id, username, type} = oldUser
+            const data = Object.assign({_id, username, type}, user)
+            // 返回
+            res.send({code: 0, data})
+        }
     })
-});
+})
 router.get('/user',function (req,res) {
     const userid =req.cookies('user_id')
     if(!userid){
