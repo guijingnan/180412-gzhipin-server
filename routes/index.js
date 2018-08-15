@@ -1,7 +1,7 @@
 let express = require('express');
 let router = express.Router();
 const md5 = require('blueimp-md5');
-const {UserModel} = require('../db/models');
+const {UserModel,ChatModel} = require('../db/models');
 const filter = {password: 0, __v: 0}
 router.get('/', function(req, res, next) {
   res.render('index', { title: 'Express' });
@@ -79,5 +79,14 @@ router.get('/user', function (req, res) {
         }
 
     })
-})
+});
+router.get('/userlist',function(req,res){
+    const {type} = req.query;
+    console.log(type)
+    UserModel.find({type}, filter, function (error, users) {
+        console.log(users)
+        res.send({code: 0, data: users})
+    })
+});
+
 module.exports = router;
